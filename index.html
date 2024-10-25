@@ -9,49 +9,82 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
+    <div class="header">
         <h1>Peter Johnstone</h1>
-        <p>Junior Computer Science Major | Mathematics Minor</p>
-    </header>
+        <p class="headerp">Junior Computer Science Major with a Mathematics Minor at Stonehill College</p>
+    </div>
 
-    <section id="about" class="information">
-        <h2>About Me</h2>
-        <p>Hello! My name is Peter Johnstone, a Computer Science major and Mathematics minor at Stonehill College. I'm passionate about technology and problem-solving, and I'm actively involved on campus as the founder and president of the Stonehill Chess Club.</p>
-    </section>
-
-    <section id="contact" class="information">
-        <h2>Contact Info</h2>
-        <p>Email: <a href="mailto:pjohnstone@students.stonehill.edu">pjohnstone@students.stonehill.edu</a></p>
-        <p>LinkedIn: <a href="https://www.linkedin.com/in/peter-johnstone-82a8872b1/" target="_blank">www.linkedin.com/in/peter-johnstone</a></p>
-        <div class="icons">
-            <a href="https://www.linkedin.com/in/peter-johnstone-82a8872b1/" target="_blank"><i class="fab fa-linkedin"></i></a>
-            <a href="mailto:pjohnstone@students.stonehill.edu"><i class="fas fa-envelope"></i></a>
+    <div class="leftside">
+        <div class="child1 title">
+            <h2 class="text">About Me</h2>
+            <p class="text">My name is Peter Johnstone and I am from Bristol, Rhode Island. I am currently attending Stonehill College with a Computer Science Major and a Mathematics Minor. My anticipated graduation date is May 2026. Outside of computer science and math, I am the Stonehill Chess Club Founder and President, a member of the Stonehill Men's Ultimate Frisbee team, and a member of the Association of Computing Machinery.</p>
+            <div class="icons">
+                <a href="https://www.linkedin.com/in/peter-johnstone-82a8872b1/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="mailto:pjohnstone@students.stonehill.edu"><i class="fas fa-envelope"></i></a>
+            </div>
         </div>
-    </section>
 
-    <section id="projects" class="information">
-        <h2>Relevant Projects</h2>
-        <h3>Recipe Manager Full Stack Web Application - May 2024</h3>
-        <ul>
-            <li>Developed a full-stack web application using HTML, CSS, and JavaScript for frontend, Python (Flask) for backend, and SQLite for the database.</li>
-            <li>Managed all aspects of design and functionality from scratch.</li>
-        </ul>
-    </section>
+        <div class="child2 title">
+            <h2 class="text">Relevant Projects</h2>
+            <h4 class="text"><em>Recipe Manager Full Stack Web Application - May 2024</em></h4>
+            <ul>
+                <li class="text">Worked alone to create a recipe manager web application.</li>
+                <li class="text">Used HTML, CSS, and JavaScript to design the frontend.</li>
+                <li class="text">Developed the backend with Python and Flask framework.</li>
+                <li class="text">Employed SQLite database on the backend of the application.</li>
+            </ul>
+        </div>
 
-    <section id="leadership" class="information">
-        <h2>Leadership Experience</h2>
-        <h3>Founder & President | Stonehill Chess Club</h3>
-        <p>Founded and grew the Chess Club to over 30 active members, organizing tournaments, events, and managing a team of executives.</p>
-    </section>
+        <div class="child3 title">
+            <h2 class="text">Leadership Experience</h2>
+            <h4 class="text"><em>Founder & President | Stonehill Chess Club | September 2023 - Present</em></h4>
+            <ul>
+                <li class="text">Founded and established the Chess Club, growing membership to over 30 participants.</li>
+                <li class="text">Led and managed a team of board members to coordinate events and tournaments.</li>
+            </ul>
+            <h4 class="text"><em>Orientation Leader | Stonehill College | January 2023 - August 2024</em></h4>
+            <ul>
+                <li class="text">Mentored over 40 incoming students, fostering a welcoming environment.</li>
+                <li class="text">Collaborated with other leaders to execute interactive orientation activities.</li>
+            </ul>
+        </div>
 
-    <section id="work" class="information">
-        <h2>Work Experience</h2>
-        <h3>Barback & Host | Portside Tavern</h3>
-        <ul>
-            <li>Communicated with staff to ensure efficient operations.</li>
-            <li>Maintained cleanliness and stocked inventory to enhance guest experiences.</li>
-        </ul>
-    </section>
+        <div class="child3 title">
+            <h2 class="text">Work Experience</h2>
+            <h4 class="text"><em>Barback & Host | Portside Tavern | July 2023 - Present</em></h4>
+            <ul>
+                <li class="text">Communicated with staff to ensure efficient flow of guests.</li>
+                <li class="text">Maintained cleanliness of tables and bar inventory.</li>
+            </ul>
+        </div>
+    </div>
 
+    <div class="rightside">
+        <div class="child1right">
+            <h2 class="text">Contact Info</h2>
+            <p><a href="mailto:pjohnstone@students.stonehill.edu" class="text">Email: pjohnstone@students.stonehill.edu</a></p>
+            <p><a href="https://www.linkedin.com/in/peter-johnstone-82a8872b1/" target="_blank" class="text">LinkedIn: www.linkedin.com/in/peter-johnstone</a></p>
+        </div>
+
+        <div class="child2right">
+            <h2 id="table" class="text">Skills</h2>
+            <ul>
+                <li class="text">Python</li>
+                <li class="text">HTML, CSS, JavaScript</li>
+                <li class="text">SQL (SQLite)</li>
+                <li class="text">Flask Framework</li>
+                <li class="text">Leadership</li>
+            </ul>
+        </div>
+
+        <div class="child3right">
+            <h2 class="text">Top 3 Albums!</h2>
+            <ul>
+                <li class="text">"Abbey Road" by The Beatles</li>
+                <li class="text">"OK Computer" by Radiohead</li>
+                <li class="text">"Dark Side of the Moon" by Pink Floyd</li>
+            </ul>
+        </div>
+    </div>
 </body>
 </html>
