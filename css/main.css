@@ -1,54 +1,67 @@
 /* General Styles */
 body {
-    font-family: 'Roboto', sans-serif;
-    background: linear-gradient(to right, #f3f3f3, #eaeaea);
-    color: #333;
+    background-color: #ecb336;
+    font-family: Arial, sans-serif;
+    color: #fff;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-header {
+.header {
+    background-color: #ecb336;
     text-align: center;
-    padding: 50px 0;
-    background-color: #333;
-    color: #fff;
+    padding: 20px;
 }
 
-header h1 {
+h1 {
+    color: white;
     font-size: 2.5rem;
-    margin: 0;
 }
 
-header p {
+.headerp {
+    color: white;
     font-size: 1.2rem;
 }
 
-.information {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 10px;
+.leftside {
+    float: left;
     width: 70%;
-    margin: 20px auto;
     padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rightside {
+    float: right;
+    width: 25%;
+    padding: 20px;
+    margin-right: 2%;
+}
+
+.child1, .child2, .child3, .child1right, .child2right, .child3right {
+    background-color: #222121;
+    padding: 1rem 1rem;
+    margin-bottom: 30px;
+    border-radius: 8px;
 }
 
 h2 {
     font-size: 1.8rem;
-    color: #333;
-    border-bottom: 2px solid #f90;
-    padding-bottom: 10px;
+    color: #fff;
 }
 
-p {
+h4 {
+    font-size: 1.4rem;
+    color: #fff;
+}
+
+p, ul, li, a {
+    color: #fff;
     font-size: 1rem;
-    line-height: 1.6;
+    text-decoration: none;
 }
 
-a {
-    color: #f90;
-    text-decoration: none;
+ul {
+    list-style-type: none;
 }
 
 .icons {
@@ -63,11 +76,17 @@ a {
     margin: 10px 0;
 }
 
-ul {
-    margin: 10px 0;
-    padding-left: 20px;
+a {
+    color: #ecb336;
 }
 
-li {
-    margin-bottom: 10px;
+#table {
+    width: 150px;
+}
+
+img {
+    height: 300px;
+    width: 300px;
+    border-radius: 50%;
+    border: 10px solid white;
 }
