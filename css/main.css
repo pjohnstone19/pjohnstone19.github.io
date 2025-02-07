@@ -1,61 +1,118 @@
-.header {
+.header
+{
   background-color: #53cbff;
   text-align: center;
   font-size: larger;
 }
 
-h1 {
+h1
+{
   color:#17252ae3;
+
 }
 
-.headerp {
+.headerp
+{
   color:#ffffff;
   font-size: larger;
 }
 
-.child1, .child2, .child3, .child4 {
-  background-color:#17252ae3;
+.child1
+{
+  background-color:#17252ae3 ;
   display: inline-block;
   padding: 1rem 1rem;
   margin-bottom: 30px;
-  width: 100%;
 }
 
-body {
+.child2
+{
+  background-color:#17252ae3 ;
+  margin-bottom: 30px;
+  display: inline-block;
+  padding: 1rem 1rem;
+}
+
+.child3
+{
+  background-color:#17252ae3 ;
+  display: inline-block;
+  padding: 1rem 1rem;
+  margin-bottom:30px;
+}
+
+body
+{
   background-color: #53cbff;
 }
 
-.title {
+.title
+{
   width: 100%;
-  margin-left: 50px;
+  margin-left:50px;
 }
 
-#table {
-  width: 150px;
+#table
+{
+  width:150px;
 }
 
-.text {
-  color: #ffffff;
+.text
+{
+  color:#ffffff;
 }
 
-.rightside {
-  float: right;
-  margin-left: 10%;
+.rightside
+{
+  float:right;
+  margin-left:10%;
   width: 20%;
 }
 
-.leftside {
-  float: left;
+.leftside
+{
+  float:left;
   width: 70%;
 }
 
-.child4right, .child1right, .child2right, .child3right {
-  background-color: #17252ae3;
+.child4right
+{
+  background-color: #17252ae3 ;
   display: inline-block;
   padding: 1rem 1rem;
-  margin-bottom: 30px;
+  margin-bottom:30px;
   width: 80%;
 }
+
+/* Relevant Coursework */
+.child1right
+{
+  background-color: #17252ae3 ;
+  padding: 1rem 1rem;
+  margin-bottom:30px;
+  margin-right:85px;
+  width: 80%;
+}
+
+/* Relevant Coursework */
+.child2right
+{
+  background-color: #17252ae3 ;
+  padding: 1rem 1rem;
+  margin-bottom:30px;
+
+  width: 80%;
+  }
+
+/* Relevant Coursework */
+  .child3right
+{
+    background-color: #17252ae3 ;
+    padding: 1rem 1rem;
+    margin-bottom:30px;
+    margin-right:85px;
+    width: 80%;
+    }
 
 .icons {
   display: flex;
@@ -69,11 +126,11 @@ body {
   margin: 10px 0;
 }
 
-img {
-  height: 300px;
+img{
+  height:300px;
   width: 300px;
   border-radius: 50%;
-  border: 10px solid white;
+  border:10px solid white;
 }
 
 /* Responsive Design */
