@@ -116,10 +116,23 @@ html {
   border-bottom: 1px solid rgba(24, 24, 21, 0.08);
   scroll-margin-top: 4rem;
   background-color: var(--canvas);
-  background-image: url("images/landscape_background.jpg");
+  /* Compressed hero variants (~100–250KB) instead of the 5.5MB source */
+  background-image: image-set(
+    url("images/landscape_background-1280.webp") type("image/webp"),
+    url("images/landscape_background-1280.jpg") type("image/jpeg")
+  );
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+@media (min-width: 900px) {
+  .header {
+    background-image: image-set(
+      url("images/landscape_background-1920.webp") type("image/webp"),
+      url("images/landscape_background-1920.jpg") type("image/jpeg")
+    );
+  }
 }
 
 .header::before {

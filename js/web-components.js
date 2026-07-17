@@ -169,25 +169,33 @@ class Music extends HTMLElement {
     const targetUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(
       term,
     )}&media=music&entity=song&limit=8`;
-    let f = await fetch(targetUrl);
-    let data = await f.json();
-    if (data.results && data.results.length > 0) {
+    this.track = null;
+    try {
+      const response = await fetch(targetUrl);
+      if (!response.ok) {
+        throw new Error(`iTunes search failed (${response.status})`);
+      }
+      const data = await response.json();
+      if (!data.results?.length) {
+        console.warn(`No music found for: ${term}`);
+        return;
+      }
       const title = (this.title || "").toLowerCase();
       const artist = (this.artist || "").toLowerCase();
-      this.track =
+      const match =
         data.results.find(
           (r) =>
             r.trackName?.toLowerCase().includes(title) &&
             r.artistName?.toLowerCase().includes(artist.split(" ")[0] || artist),
         ) || data.results[0];
-      if (!isTrustedAppleMediaUrl(this.track?.previewUrl)) {
+      if (!isTrustedAppleMediaUrl(match?.previewUrl)) {
         console.warn(`Untrusted preview URL for: ${term}`);
-        this.track = null;
         return;
       }
+      this.track = match;
       this.setAttribute("file", this.track.previewUrl);
-    } else {
-      console.warn(`No music found for: ${term}`);
+    } catch (error) {
+      console.warn(`iTunes lookup failed for: ${term}`, error);
       this.track = null;
     }
   }
@@ -219,9 +227,8 @@ class Music extends HTMLElement {
       if (!this.#isPlayCurrent(token)) return;
     }
     if (!this.track) {
-      // No track available, show error message on iOS
-      if (this.isIOS && this.#isPlayCurrent(token)) {
-        this.showError("Track not available");
+      if (this.#isPlayCurrent(token)) {
+        this.showError("Tap to retry");
       }
       return;
     }
@@ -248,9 +255,7 @@ class Music extends HTMLElement {
       if (!this.#isPlayCurrent(token)) return;
       console.warn("Track playback failed:", error);
       this.#syncStoppedUi();
-      if (this.isIOS) {
-        this.showError("Tap to retry");
-      }
+      this.showError("Tap to retry");
     }
   }
 
@@ -436,6 +441,9 @@ class MusicList extends HTMLElement {
         `${title} ${artist}`,
       )}&media=music&entity=song&limit=5`;
       const response = await fetch(targetUrl);
+      if (!response.ok) {
+        throw new Error(`iTunes artwork search failed (${response.status})`);
+      }
       const data = await response.json();
       const match =
         data.results?.find(
