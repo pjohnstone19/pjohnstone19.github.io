@@ -76,9 +76,12 @@ class FigSwitch extends HTMLElement {
 customElements.define("fig-switch", FigSwitch);
 
 class Music extends HTMLElement {
+  #playToken = 0;
+
   constructor() {
     super();
     this.track = null;
+    this.playPending = false;
   }
   connectedCallback() {
     this.image = this.getAttribute("image");
@@ -95,8 +98,37 @@ class Music extends HTMLElement {
     );
     this.player.setVolume(0.5);
     this.playing = false;
+    this.playPending = false;
     this.setAttribute("playing", "false");
     this.render();
+  }
+
+  #isPlayCurrent(token) {
+    return token === this.#playToken;
+  }
+
+  /** Cancel in-flight lookup/start and stop any audio that already began. */
+  cancel() {
+    this.#playToken++;
+    this.playPending = false;
+    this.player.stop();
+    this.#forceStoppedUi();
+  }
+
+  #forceStoppedUi() {
+    const hadPlayingUi =
+      this.playing || this.classList.contains("playing");
+    this.playing = false;
+    this.setAttribute("playing", "false");
+    this.classList.remove("playing");
+    const button = this.querySelector("fig-button.play");
+    if (button) {
+      button.textContent = "Play";
+      button.style.fontSize = "";
+    }
+    if (hadPlayingUi) {
+      this.dispatchEvent(new CustomEvent("paused"));
+    }
   }
 
   #syncStoppedUi() {
@@ -106,15 +138,7 @@ class Music extends HTMLElement {
       }
       return;
     }
-    this.playing = false;
-    this.setAttribute("playing", "false");
-    this.classList.remove("playing");
-    const button = this.querySelector("fig-button.play");
-    if (button) {
-      button.textContent = "Play";
-      button.style.fontSize = "";
-    }
-    this.dispatchEvent(new CustomEvent("paused"));
+    this.#forceStoppedUi();
   }
   render() {
     this.innerHTML = `
@@ -189,13 +213,14 @@ class Music extends HTMLElement {
     );
   }
 
-  async playTrack() {
+  async playTrack(token = this.#playToken) {
     if (!this.track) {
       await this.fetchMusic();
+      if (!this.#isPlayCurrent(token)) return;
     }
     if (!this.track) {
       // No track available, show error message on iOS
-      if (this.isIOS) {
+      if (this.isIOS && this.#isPlayCurrent(token)) {
         this.showError("Track not available");
       }
       return;
@@ -207,6 +232,11 @@ class Music extends HTMLElement {
         !this.player.isPlaying
       ) {
         await this.player.play(this.track.previewUrl);
+        if (!this.#isPlayCurrent(token)) {
+          this.player.stop();
+          this.#forceStoppedUi();
+          return;
+        }
         this.playing = true;
         this.setAttribute("playing", "true");
         this.hideError();
@@ -215,6 +245,7 @@ class Music extends HTMLElement {
         await this.player.pause();
       }
     } catch (error) {
+      if (!this.#isPlayCurrent(token)) return;
       console.warn("Track playback failed:", error);
       this.#syncStoppedUi();
       if (this.isIOS) {
@@ -240,15 +271,25 @@ class Music extends HTMLElement {
   }
 
   async play() {
+    const token = ++this.#playToken;
+    this.playPending = true;
+
     // Initialize audio on iOS with user gesture
     if (this.isIOS) {
       this.player.initializeAudio();
     }
 
-    await this.playTrack();
-    if (this.playing) {
-      this.classList.add("playing");
-      this.dispatchEvent(new CustomEvent("playing"));
+    try {
+      await this.playTrack(token);
+      if (!this.#isPlayCurrent(token)) return;
+      if (this.playing) {
+        this.classList.add("playing");
+        this.dispatchEvent(new CustomEvent("playing"));
+      }
+    } finally {
+      if (this.#isPlayCurrent(token)) {
+        this.playPending = false;
+      }
     }
   }
   static get observedAttributes() {
@@ -256,7 +297,7 @@ class Music extends HTMLElement {
   }
 }
 
-customElements.define("rogie-music", Music);
+customElements.define("peters-music", Music);
 
 class MusicList extends HTMLElement {
   constructor() {
@@ -410,6 +451,29 @@ class MusicList extends HTMLElement {
     }
   }
 
+  #advanceTrack({ continuePlayback = false } = {}) {
+    const renderedTracks = this.querySelectorAll("peters-music");
+    if (!renderedTracks.length) return;
+
+    const previous = this.querySelector("peters-music[current='true']");
+    this.currentTrack++;
+    if (this.currentTrack >= renderedTracks.length) {
+      this.currentTrack = 0;
+    }
+
+    previous?.setAttribute("current", "false");
+    // Always cancel in-flight starts, not only tracks already marked playing.
+    previous?.cancel();
+
+    const current = renderedTracks[this.currentTrack];
+    current.setAttribute("current", "true");
+    this.style.setProperty("--percent", 0);
+
+    if (continuePlayback) {
+      current.play();
+    }
+  }
+
   render() {
     this.innerHTML = `
     <span class="turntable-speed-control">
@@ -427,16 +491,16 @@ class MusicList extends HTMLElement {
       .filter((track) => !track.error)
       .slice(0, this.limit)
       .map((track, index) => {
-        return `<rogie-music 
+        return `<peters-music 
         image="${escapeHtml(track.imageSrc)}" 
         title="${escapeHtml(track.name)}"
         current="${index === this.currentTrack}"
         artist="${escapeHtml(track.artistName)}"
         delay="${this.delay}"
-        link="${escapeHtml(track.url)}"></rogie-music>`;
+        link="${escapeHtml(track.url)}"></peters-music>`;
       })
       .join("")}`;
-    this.querySelectorAll("rogie-music").forEach((musicElement) => {
+    this.querySelectorAll("peters-music").forEach((musicElement) => {
       musicElement.addEventListener("timeupdate", (e) => {
         this.style.setProperty("--percent", e.detail.percent);
       });
@@ -479,48 +543,27 @@ class MusicList extends HTMLElement {
     });
 
     // Add event listeners after the DOM is updated
-    this.querySelectorAll("rogie-music").forEach((musicElement, index) => {
+    this.querySelectorAll("peters-music").forEach((musicElement, index) => {
       musicElement.addEventListener("ended", () => {
         // Auto-advance to next track when current track ends
         if (index === this.currentTrack) {
-          const renderedTracks = this.querySelectorAll("rogie-music");
-          this.currentTrack++;
-          if (this.currentTrack >= renderedTracks.length) {
-            this.currentTrack = 0;
-          }
-          let previous = this.querySelector("rogie-music[current='true']");
-          previous.setAttribute("current", "false");
-          let current = renderedTracks[this.currentTrack];
-          current.setAttribute("current", "true");
-          this.style.setProperty("--percent", 0);
-
-          previous.player.pause();
-          current.play();
+          this.#advanceTrack({ continuePlayback: true });
         }
       });
     });
 
     this.querySelector("fig-button.next").addEventListener("click", () => {
-      const renderedTracks = this.querySelectorAll("rogie-music");
-      this.currentTrack++;
-      if (this.currentTrack >= renderedTracks.length) {
-        this.currentTrack = 0;
-      }
-      let previous = this.querySelector("rogie-music[current='true']");
-      previous.setAttribute("current", "false");
-      let current = renderedTracks[this.currentTrack];
-      current.setAttribute("current", "true");
-
-      if (previous?.playing) {
-        previous.player.pause();
-        current.play();
-      }
+      const previous = this.querySelector("peters-music[current='true']");
+      const continuePlayback = Boolean(
+        previous?.playing || previous?.playPending,
+      );
+      this.#advanceTrack({ continuePlayback });
     });
     this.querySelector("input.turntable-needle").addEventListener(
       "click",
       () => {
         //play the current track
-        let current = this.querySelector("rogie-music[current='true']");
+        let current = this.querySelector("peters-music[current='true']");
         current.play();
       },
     );
@@ -529,7 +572,7 @@ class MusicList extends HTMLElement {
       const switchEl = e.currentTarget;
       this.playbackRate = switchEl.checked ? 45 : 33;
       this.style.setProperty("--playback-rate", this.playbackRate);
-      this.querySelectorAll("rogie-music").forEach((musicElement) => {
+      this.querySelectorAll("peters-music").forEach((musicElement) => {
         musicElement.player.setPlaybackRate(this.playbackRate / 33);
       });
     });

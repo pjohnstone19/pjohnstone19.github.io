@@ -296,6 +296,27 @@ class AudioPlayer {
       this.isPlaying = false;
     }
   }
+
+  /** Hard-stop audio even if a start is still in flight and isPlaying is false. */
+  stop() {
+    if (this.fadeInInterval) {
+      clearInterval(this.fadeInInterval);
+      this.fadeInInterval = null;
+    }
+    if (this.fadeOutInterval) {
+      clearInterval(this.fadeOutInterval);
+      this.fadeOutInterval = null;
+    }
+    if (this.audio) {
+      this.audio.pause();
+      try {
+        this.audio.currentTime = 0;
+      } catch {
+        // Ignore if the media element rejects seeking while loading.
+      }
+    }
+    this.isPlaying = false;
+  }
 }
 
 export { Cache, AudioPlayer };
