@@ -4,69 +4,98 @@ class Cache {
     this.ttlPrefix = `${prefix}ttl_`;
   }
 
-  // Set a value with optional TTL (time-to-live in milliseconds)
-  set(key, value, ttl = null) {
-    const fullKey = this.prefix + key;
-    const data = {
-      value: value,
-      timestamp: Date.now(),
-      ttl: ttl,
-    };
-
-    localStorage.setItem(fullKey, JSON.stringify(data));
-
-    // If TTL is provided, store the expiration time
-    if (ttl) {
-      const ttlKey = this.ttlPrefix + key;
-      const expirationTime = Date.now() + ttl;
-      localStorage.setItem(ttlKey, expirationTime.toString());
+  #storageAvailable() {
+    try {
+      const testKey = `${this.prefix}__storage_test__`;
+      localStorage.setItem(testKey, "1");
+      localStorage.removeItem(testKey);
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  // Get a value, returns null if expired or not found
+  // Set a value with optional TTL (time-to-live in milliseconds)
+  set(key, value, ttl = null) {
+    try {
+      if (!this.#storageAvailable()) return;
+
+      const fullKey = this.prefix + key;
+      const data = {
+        value: value,
+        timestamp: Date.now(),
+        ttl: ttl,
+      };
+
+      localStorage.setItem(fullKey, JSON.stringify(data));
+
+      // If TTL is provided, store the expiration time
+      if (ttl) {
+        const ttlKey = this.ttlPrefix + key;
+        const expirationTime = Date.now() + ttl;
+        localStorage.setItem(ttlKey, expirationTime.toString());
+      }
+    } catch {
+      // Caching is optional; ignore storage failures.
+    }
+  }
+
+  // Get a value, returns null if expired, missing, or storage is blocked
   get(key) {
-    const fullKey = this.prefix + key;
-    const ttlKey = this.ttlPrefix + key;
+    try {
+      const fullKey = this.prefix + key;
+      const ttlKey = this.ttlPrefix + key;
 
-    // Check if item exists
-    const item = localStorage.getItem(fullKey);
-    if (!item) return null;
+      // Check if item exists
+      const item = localStorage.getItem(fullKey);
+      if (!item) return null;
 
-    // Check TTL
-    const ttlValue = localStorage.getItem(ttlKey);
-    if (ttlValue) {
-      const expirationTime = parseInt(ttlValue);
-      if (Date.now() > expirationTime) {
-        this.remove(key);
+      // Check TTL
+      const ttlValue = localStorage.getItem(ttlKey);
+      if (ttlValue) {
+        const expirationTime = parseInt(ttlValue);
+        if (Date.now() > expirationTime) {
+          this.remove(key);
+          return null;
+        }
+      }
+
+      try {
+        const data = JSON.parse(item);
+        return data.value;
+      } catch {
         return null;
       }
-    }
-
-    try {
-      const data = JSON.parse(item);
-      return data.value;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
 
   // Remove a specific key
   remove(key) {
-    const fullKey = this.prefix + key;
-    const ttlKey = this.ttlPrefix + key;
+    try {
+      const fullKey = this.prefix + key;
+      const ttlKey = this.ttlPrefix + key;
 
-    localStorage.removeItem(fullKey);
-    localStorage.removeItem(ttlKey);
+      localStorage.removeItem(fullKey);
+      localStorage.removeItem(ttlKey);
+    } catch {
+      // Ignore storage failures.
+    }
   }
 
   // Clear all cached items owned by this cache instance
   clear() {
-    const keys = Object.keys(localStorage);
-    keys.forEach((key) => {
-      if (key.startsWith(this.prefix) || key.startsWith(this.ttlPrefix)) {
-        localStorage.removeItem(key);
-      }
-    });
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach((key) => {
+        if (key.startsWith(this.prefix) || key.startsWith(this.ttlPrefix)) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // Ignore storage failures.
+    }
   }
 }
 
@@ -102,6 +131,48 @@ class AudioPlayer {
     this.playbackRate = rate;
     if (this.audio) {
       this.audio.playbackRate = rate;
+    }
+  }
+
+  #ensureAudioElement() {
+    if (this.audio) return;
+    this.audio = new Audio();
+    this.audio.playbackRate = this.playbackRate;
+    if (this.onEnded) {
+      this.audio.addEventListener("ended", this.onEnded);
+    }
+    if (this.onTimeUpdate) {
+      this.audio.addEventListener("timeupdate", this.onTimeUpdate);
+    }
+    if (this.onPause) {
+      this.audio.addEventListener("pause", this.onPause);
+    }
+  }
+
+  /**
+   * Call synchronously from a tap/click handler so WebKit keeps user activation
+   * for the eventual audible play(), even if setup continues in microtasks.
+   */
+  captureUserGesture() {
+    this.#ensureAudioElement();
+    this.hasUserGesture = true;
+    if (!this.isIOS) return;
+
+    // Prime the element during the gesture. Rejection is fine when src is empty.
+    const playPromise = this.audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          if (!this.isPlaying) {
+            this.audio.pause();
+            try {
+              this.audio.currentTime = 0;
+            } catch {
+              // Ignore seek errors while priming.
+            }
+          }
+        })
+        .catch(() => {});
     }
   }
 
@@ -178,23 +249,7 @@ class AudioPlayer {
 
   // Initialize audio with user gesture (call this on first user interaction)
   initializeAudio() {
-    if (!this.audio && this.isIOS) {
-      this.audio = new Audio();
-      this.audio.volume = 0;
-      this.audio.playbackRate = this.playbackRate;
-      this.hasUserGesture = true;
-
-      // Set up event listeners once
-      if (this.onEnded) {
-        this.audio.addEventListener("ended", this.onEnded);
-      }
-      if (this.onTimeUpdate) {
-        this.audio.addEventListener("timeupdate", this.onTimeUpdate);
-      }
-      if (this.onPause) {
-        this.audio.addEventListener("pause", this.onPause);
-      }
-    }
+    this.captureUserGesture();
   }
 
   async play(url = null) {
@@ -210,22 +265,7 @@ class AudioPlayer {
       }
 
       this.currentUrl = url;
-
-      if (!this.audio) {
-        this.audio = new Audio();
-        this.audio.playbackRate = this.playbackRate;
-
-        // Set up event listeners for new audio element
-        if (this.onEnded) {
-          this.audio.addEventListener("ended", this.onEnded);
-        }
-        if (this.onTimeUpdate) {
-          this.audio.addEventListener("timeupdate", this.onTimeUpdate);
-        }
-        if (this.onPause) {
-          this.audio.addEventListener("pause", this.onPause);
-        }
-      }
+      this.#ensureAudioElement();
 
       // Only allow https audio URLs
       if (url && !/^https:\/\//i.test(url)) {

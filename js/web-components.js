@@ -77,6 +77,7 @@ customElements.define("fig-switch", FigSwitch);
 
 class Music extends HTMLElement {
   #playToken = 0;
+  #prefetchPromise = null;
 
   constructor() {
     super();
@@ -100,6 +101,16 @@ class Music extends HTMLElement {
     this.playing = false;
     this.playPending = false;
     this.setAttribute("playing", "false");
+
+    // Hydrate prefetched preview so Play can call Audio.play() without awaiting lookup.
+    const prefetched = this.getAttribute("file");
+    if (prefetched && isTrustedAppleMediaUrl(prefetched)) {
+      this.track = { previewUrl: prefetched };
+    } else {
+      this.track = null;
+      this.#prefetchPromise = this.fetchMusic();
+    }
+
     this.render();
   }
 
@@ -222,6 +233,12 @@ class Music extends HTMLElement {
   }
 
   async playTrack(token = this.#playToken) {
+    // Prefer already-prefetched track so the first Audio.play() stays in the
+    // user-gesture call stack (critical for iOS/Safari).
+    if (!this.track && this.#prefetchPromise) {
+      await this.#prefetchPromise;
+      if (!this.#isPlayCurrent(token)) return;
+    }
     if (!this.track) {
       await this.fetchMusic();
       if (!this.#isPlayCurrent(token)) return;
@@ -279,10 +296,8 @@ class Music extends HTMLElement {
     const token = ++this.#playToken;
     this.playPending = true;
 
-    // Initialize audio on iOS with user gesture
-    if (this.isIOS) {
-      this.player.initializeAudio();
-    }
+    // Must run synchronously in the tap handler before any await.
+    this.player.captureUserGesture();
 
     try {
       await this.playTrack(token);
@@ -414,19 +429,20 @@ class MusicList extends HTMLElement {
       },
     ];
 
-    const cacheKey = "playlist-favorites-v6";
+    const cacheKey = "playlist-favorites-v7-previews";
     let cachedMusic = CACHE.get(cacheKey);
     if (cachedMusic) {
       this.playlist = cachedMusic;
     } else {
       this.playlist = await Promise.all(
         favorites.map(async (album) => {
-          const artwork = await this.fetchArtwork(album.name, album.artistName);
+          const meta = await this.fetchTrackMeta(album.name, album.artistName);
           return {
             name: album.name,
             artistName: album.artistName,
             url: album.url,
-            imageSrc: artwork,
+            imageSrc: meta.artwork,
+            previewUrl: meta.previewUrl,
           };
         }),
       );
@@ -435,14 +451,14 @@ class MusicList extends HTMLElement {
     await this.preloadPlaylist(this.limit);
   }
 
-  async fetchArtwork(title, artist) {
+  async fetchTrackMeta(title, artist) {
     try {
       const targetUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(
         `${title} ${artist}`,
       )}&media=music&entity=song&limit=5`;
       const response = await fetch(targetUrl);
       if (!response.ok) {
-        throw new Error(`iTunes artwork search failed (${response.status})`);
+        throw new Error(`iTunes track search failed (${response.status})`);
       }
       const data = await response.json();
       const match =
@@ -452,10 +468,14 @@ class MusicList extends HTMLElement {
             r.artistName?.toLowerCase().includes(artist.toLowerCase().split(" ")[0]),
         ) || data.results?.[0];
       const artwork = match?.artworkUrl100?.replace("100x100bb", "600x600bb") || "";
-      return isTrustedAppleMediaUrl(artwork) ? artwork : "";
+      const previewUrl = match?.previewUrl || "";
+      return {
+        artwork: isTrustedAppleMediaUrl(artwork) ? artwork : "",
+        previewUrl: isTrustedAppleMediaUrl(previewUrl) ? previewUrl : "",
+      };
     } catch (error) {
-      console.warn("Artwork fetch failed:", error);
-      return "";
+      console.warn("Track metadata fetch failed:", error);
+      return { artwork: "", previewUrl: "" };
     }
   }
 
@@ -505,6 +525,7 @@ class MusicList extends HTMLElement {
         current="${index === this.currentTrack}"
         artist="${escapeHtml(track.artistName)}"
         delay="${this.delay}"
+        file="${escapeHtml(track.previewUrl || "")}"
         link="${escapeHtml(track.url)}"></peters-music>`;
       })
       .join("")}`;
