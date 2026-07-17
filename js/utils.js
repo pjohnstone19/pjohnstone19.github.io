@@ -155,11 +155,10 @@ class AudioPlayer {
       await this.audio.play();
     } catch (error) {
       console.warn("Audio play failed during fade in:", error);
-      // For iOS, set volume directly and throw error up
       if (this.isIOS) {
         this.audio.volume = targetVolume;
-        throw error;
       }
+      throw error;
     }
 
     return new Promise((resolve) => {
@@ -240,39 +239,55 @@ class AudioPlayer {
       try {
         // Preload on non-iOS devices
         if (!this.isIOS) {
-          await this.audio.load();
+          this.audio.load();
         }
         await this.fadeIn();
+        this.isPlaying = true;
       } catch (error) {
         console.warn("Audio playback failed:", error);
+        this.isPlaying = false;
         // Fallback: try direct play for iOS
         if (this.isIOS) {
           try {
             this.audio.volume = this.volume;
             await this.audio.play();
             this.isPlaying = true;
+            return;
           } catch (iosError) {
             console.error("iOS audio playback failed:", iosError);
+            this.isPlaying = false;
+            throw iosError;
           }
         }
+        throw error;
       }
     } else if (this.audio) {
       if (!this.isPlaying) {
         try {
           await this.fadeIn();
+          this.isPlaying = true;
         } catch (error) {
           console.warn("Resume playback failed:", error);
+          this.isPlaying = false;
           // Fallback for iOS
           if (this.isIOS) {
-            this.audio.volume = this.volume;
-            await this.audio.play();
-            this.isPlaying = true;
+            try {
+              this.audio.volume = this.volume;
+              await this.audio.play();
+              this.isPlaying = true;
+              return;
+            } catch (iosError) {
+              this.isPlaying = false;
+              throw iosError;
+            }
           }
+          throw error;
         }
       }
+    } else {
+      this.isPlaying = false;
+      throw new Error("No audio element available to play");
     }
-
-    this.isPlaying = true;
   }
 
   async pause() {

@@ -91,15 +91,30 @@ class Music extends HTMLElement {
     this.player = new AudioPlayer(
       () => this.onEnded(),
       (e) => this.onTimeUpdate(e),
-      () => {
-        this.playing = false;
-        this.setAttribute("playing", "false");
-      },
+      () => this.#syncStoppedUi(),
     );
     this.player.setVolume(0.5);
     this.playing = false;
     this.setAttribute("playing", "false");
     this.render();
+  }
+
+  #syncStoppedUi() {
+    if (!this.playing && !this.classList.contains("playing")) {
+      if (this.getAttribute("playing") !== "false") {
+        this.setAttribute("playing", "false");
+      }
+      return;
+    }
+    this.playing = false;
+    this.setAttribute("playing", "false");
+    this.classList.remove("playing");
+    const button = this.querySelector("fig-button.play");
+    if (button) {
+      button.textContent = "Play";
+      button.style.fontSize = "";
+    }
+    this.dispatchEvent(new CustomEvent("paused"));
   }
   render() {
     this.innerHTML = `
@@ -155,9 +170,7 @@ class Music extends HTMLElement {
 
   //emit an event to the parent when audio hits the end of the track
   onEnded() {
-    this.playing = false;
-    this.player.pause();
-    this.setAttribute("playing", "false");
+    this.#syncStoppedUi();
     this.dispatchEvent(new CustomEvent("ended"));
   }
 
@@ -195,17 +208,18 @@ class Music extends HTMLElement {
       ) {
         await this.player.play(this.track.previewUrl);
         this.playing = true;
+        this.setAttribute("playing", "true");
         this.hideError();
       } else {
-        this.player.pause();
-        this.playing = false;
+        // pause() fires the audio "pause" event → #syncStoppedUi
+        await this.player.pause();
       }
     } catch (error) {
       console.warn("Track playback failed:", error);
+      this.#syncStoppedUi();
       if (this.isIOS) {
         this.showError("Tap to retry");
       }
-      this.playing = false;
     }
   }
 
@@ -233,36 +247,12 @@ class Music extends HTMLElement {
 
     await this.playTrack();
     if (this.playing) {
-      this.dispatchEvent(new CustomEvent("playing"));
       this.classList.add("playing");
-    } else {
-      this.dispatchEvent(new CustomEvent("paused"));
-      this.classList.remove("playing");
+      this.dispatchEvent(new CustomEvent("playing"));
     }
   }
-  //set the attributes to observe playing
   static get observedAttributes() {
-    return ["playing", "current"];
-  }
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "playing") {
-      if (newValue === "true") {
-        this.playing = true;
-        this.playTrack();
-      } else {
-        this.playing = false;
-        this.player.pause();
-      }
-
-      // Update button text
-      const button = this.querySelector("fig-button.play");
-      if (button) {
-        button.textContent = this.playing ? "Pause" : "Play";
-      }
-    } else if (name === "current") {
-      // Handle current track indication if needed
-      // This attribute is used for styling the current track
-    }
+    return ["current"];
   }
 }
 
