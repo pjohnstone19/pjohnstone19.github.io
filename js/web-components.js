@@ -274,6 +274,7 @@ class Music extends HTMLElement {
     }
     if (!this.track) {
       if (this.#isPlayCurrent(token)) {
+        this.#stopSharedPlayback();
         this.showError("Tap to retry");
       }
       return;
@@ -286,10 +287,7 @@ class Music extends HTMLElement {
       ) {
         await player.play(this.track.previewUrl);
         if (!this.#isPlayCurrent(token)) {
-          if (this.#list?.activeMusic === this) {
-            player.stop();
-            this.#list.activeMusic = null;
-          }
+          this.#stopSharedPlayback();
           this.#forceStoppedUi();
           return;
         }
@@ -303,9 +301,27 @@ class Music extends HTMLElement {
     } catch (error) {
       if (!this.#isPlayCurrent(token)) return;
       console.warn("Track playback failed:", error);
+      this.#stopSharedPlayback();
       this.#syncStoppedUi();
       this.showError("Tap to retry");
     }
+  }
+
+  #stopSharedPlayback() {
+    const list = this.#list;
+    if (list?.activeMusic === this && this.player) {
+      this.player.stop();
+      list.activeMusic = null;
+    }
+  }
+
+  /** True when this track can start without awaiting a network lookup. */
+  hasReadyPreview() {
+    if (this.track?.previewUrl && isTrustedAppleMediaUrl(this.track.previewUrl)) {
+      return true;
+    }
+    const file = this.getAttribute("file");
+    return Boolean(file && isTrustedAppleMediaUrl(file));
   }
 
   showError(message) {
@@ -338,9 +354,14 @@ class Music extends HTMLElement {
     // Must run synchronously in the tap/click handler before any await.
     player.captureUserGesture();
 
-    // Claim the shared player; clear other tracks' UI without stopping audio yet.
+    // Claim the shared player. Only keep prior audio alive when this track can
+    // start immediately; otherwise stop so a lookup can't leave stale audio.
+    const ready = this.hasReadyPreview();
     if (list.activeMusic && list.activeMusic !== this) {
-      list.activeMusic.cancel({ stopPlayer: false });
+      list.activeMusic.cancel({ stopPlayer: !ready });
+    }
+    if (!ready) {
+      player.stop();
     }
     list.activeMusic = this;
 
@@ -547,16 +568,24 @@ class MusicList extends HTMLElement {
       this.currentTrack = 0;
     }
 
-    previous?.setAttribute("current", "false");
-    // Clear previous UI/in-flight work; keep shared player unlocked for handoff.
-    previous?.cancel({ stopPlayer: !continuePlayback });
-
     const current = renderedTracks[this.currentTrack];
+    // Only keep audio alive across handoff when the next track can play immediately.
+    // Otherwise a slow/failed iTunes lookup leaves the previous track playing while
+    // UI/events already point at the new item.
+    const canHandoff = continuePlayback && current.hasReadyPreview();
+
+    previous?.setAttribute("current", "false");
+    previous?.cancel({ stopPlayer: !canHandoff });
+
     current.setAttribute("current", "true");
     this.style.setProperty("--percent", 0);
 
     if (continuePlayback) {
-      // Reuses the same unlocked Audio element (critical after track "ended").
+      if (!canHandoff) {
+        this.sharedPlayer?.stop();
+        this.activeMusic = null;
+      }
+      // Same unlocked Audio element when ready; otherwise start after stop.
       current.play();
     }
   }
