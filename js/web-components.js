@@ -1,4 +1,4 @@
-import { Cache, AudioPlayer } from "./utils.js";
+import { Cache, AudioPlayer, needsGestureUnlock } from "./utils.js";
 
 // one minute in milliseconds
 let ONE_MINUTE = 60 * 1000;
@@ -84,20 +84,24 @@ class Music extends HTMLElement {
     this.track = null;
     this.playPending = false;
   }
+
+  get #list() {
+    return this.closest("peters-music-list");
+  }
+
+  /** Shared list player — one unlocked Audio element for all tracks (required on iOS). */
+  get player() {
+    return this.#list?.sharedPlayer ?? null;
+  }
+
   connectedCallback() {
     this.image = this.getAttribute("image");
     this.title = this.getAttribute("title");
     this.artist = this.getAttribute("artist");
     this.link = this.getAttribute("link");
     this.delay = Number(this.getAttribute("delay")) || 0;
-    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.isIOS = needsGestureUnlock();
 
-    this.player = new AudioPlayer(
-      () => this.onEnded(),
-      (e) => this.onTimeUpdate(e),
-      () => this.#syncStoppedUi(),
-    );
-    this.player.setVolume(0.5);
     this.playing = false;
     this.playPending = false;
     this.setAttribute("playing", "false");
@@ -118,12 +122,31 @@ class Music extends HTMLElement {
     return token === this.#playToken;
   }
 
-  /** Cancel in-flight lookup/start and stop any audio that already began. */
-  cancel() {
+  /**
+   * Cancel in-flight lookup/start. Stops the shared player only when this track
+   * currently owns it (so advance can hand off without killing the unlock).
+   */
+  cancel({ stopPlayer = true } = {}) {
     this.#playToken++;
     this.playPending = false;
-    this.player.stop();
+    const list = this.#list;
+    if (stopPlayer && list?.activeMusic === this && this.player) {
+      this.player.stop();
+      list.activeMusic = null;
+    }
     this.#forceStoppedUi();
+  }
+
+  handlePlayerEnded() {
+    this.onEnded();
+  }
+
+  handlePlayerTimeUpdate() {
+    this.onTimeUpdate();
+  }
+
+  handlePlayerPause() {
+    this.#syncStoppedUi();
   }
 
   #forceStoppedUi() {
@@ -233,6 +256,12 @@ class Music extends HTMLElement {
   }
 
   async playTrack(token = this.#playToken) {
+    const player = this.player;
+    if (!player) {
+      this.showError("Tap to retry");
+      return;
+    }
+
     // Prefer already-prefetched track so the first Audio.play() stays in the
     // user-gesture call stack (critical for iOS/Safari).
     if (!this.track && this.#prefetchPromise) {
@@ -252,12 +281,15 @@ class Music extends HTMLElement {
 
     try {
       if (
-        this.player.currentUrl !== this.track.previewUrl ||
-        !this.player.isPlaying
+        player.currentUrl !== this.track.previewUrl ||
+        !player.isPlaying
       ) {
-        await this.player.play(this.track.previewUrl);
+        await player.play(this.track.previewUrl);
         if (!this.#isPlayCurrent(token)) {
-          this.player.stop();
+          if (this.#list?.activeMusic === this) {
+            player.stop();
+            this.#list.activeMusic = null;
+          }
           this.#forceStoppedUi();
           return;
         }
@@ -266,7 +298,7 @@ class Music extends HTMLElement {
         this.hideError();
       } else {
         // pause() fires the audio "pause" event → #syncStoppedUi
-        await this.player.pause();
+        await player.pause();
       }
     } catch (error) {
       if (!this.#isPlayCurrent(token)) return;
@@ -293,11 +325,24 @@ class Music extends HTMLElement {
   }
 
   async play() {
+    const list = this.#list;
+    const player = this.player;
+    if (!list || !player) {
+      this.showError("Tap to retry");
+      return;
+    }
+
     const token = ++this.#playToken;
     this.playPending = true;
 
-    // Must run synchronously in the tap handler before any await.
-    this.player.captureUserGesture();
+    // Must run synchronously in the tap/click handler before any await.
+    player.captureUserGesture();
+
+    // Claim the shared player; clear other tracks' UI without stopping audio yet.
+    if (list.activeMusic && list.activeMusic !== this) {
+      list.activeMusic.cancel({ stopPlayer: false });
+    }
+    list.activeMusic = this;
 
     try {
       await this.playTrack(token);
@@ -329,8 +374,20 @@ class MusicList extends HTMLElement {
     this.limit = 10;
     this.loading = true;
     this.delay = Number(this.getAttribute("delay")) || 0;
+    this.activeMusic = null;
+    this.sharedPlayer = null;
   }
   async connectedCallback() {
+    this.isIOS = needsGestureUnlock();
+    // One shared Audio element for every track so Next/auto-advance reuse the
+    // same WebKit-unlocked media element after the first user gesture.
+    this.sharedPlayer = new AudioPlayer(
+      () => this.activeMusic?.handlePlayerEnded(),
+      () => this.activeMusic?.handlePlayerTimeUpdate(),
+      () => this.activeMusic?.handlePlayerPause(),
+    );
+    this.sharedPlayer.setVolume(0.5);
+
     this.limit = this.getAttribute("limit") || 11;
     this.setAttribute("loading", this.loading);
     await this.fetchMusic();
@@ -340,8 +397,9 @@ class MusicList extends HTMLElement {
     this.style.setProperty("--playback-rate", this.playbackRate);
 
     // Initialize vinyl crackle sound
-    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     this.vinylCrackle = new Audio("assets/vinyl-crackle.m4a");
+    this.vinylCrackle.preload = "auto";
+    this.vinylCrackle.setAttribute("playsinline", "");
     this.vinylCrackle.volume = 0.5;
     this.vinylCrackle.loop = false;
     this.vinylCrackle.currentTime = 0;
@@ -490,14 +548,15 @@ class MusicList extends HTMLElement {
     }
 
     previous?.setAttribute("current", "false");
-    // Always cancel in-flight starts, not only tracks already marked playing.
-    previous?.cancel();
+    // Clear previous UI/in-flight work; keep shared player unlocked for handoff.
+    previous?.cancel({ stopPlayer: !continuePlayback });
 
     const current = renderedTracks[this.currentTrack];
     current.setAttribute("current", "true");
     this.style.setProperty("--percent", 0);
 
     if (continuePlayback) {
+      // Reuses the same unlocked Audio element (critical after track "ended").
       current.play();
     }
   }
@@ -601,9 +660,7 @@ class MusicList extends HTMLElement {
       const switchEl = e.currentTarget;
       this.playbackRate = switchEl.checked ? 45 : 33;
       this.style.setProperty("--playback-rate", this.playbackRate);
-      this.querySelectorAll("peters-music").forEach((musicElement) => {
-        musicElement.player.setPlaybackRate(this.playbackRate / 33);
-      });
+      this.sharedPlayer?.setPlaybackRate(this.playbackRate / 33);
     });
   }
 }

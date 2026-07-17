@@ -1,3 +1,14 @@
+/** True on iPhone/iPod/iPad, including iPadOS desktop-class UA. */
+function needsGestureUnlock() {
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ can report as Macintosh with touch support.
+  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
+    return true;
+  }
+  return false;
+}
+
 class Cache {
   constructor(prefix = "cache_") {
     this.prefix = prefix;
@@ -100,6 +111,8 @@ class Cache {
 }
 
 class AudioPlayer {
+  #primeId = 0;
+
   constructor(onEnded = null, onTimeUpdate = null, onPause = null) {
     this.currentUrl = null;
     this.audio = null;
@@ -112,7 +125,8 @@ class AudioPlayer {
     this.onPause = onPause;
     this.playbackRate = 1;
     this.fadeDuration = 100;
-    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.needsGestureUnlock = needsGestureUnlock();
+    this.isIOS = this.needsGestureUnlock;
     this.hasUserGesture = false;
     this.pendingPlay = false;
   }
@@ -137,10 +151,14 @@ class AudioPlayer {
   #ensureAudioElement() {
     if (this.audio) return;
     this.audio = new Audio();
+    this.audio.preload = "auto";
+    this.audio.setAttribute("playsinline", "");
+    this.audio.setAttribute("webkit-playsinline", "");
     this.audio.playbackRate = this.playbackRate;
-    if (this.onEnded) {
-      this.audio.addEventListener("ended", this.onEnded);
-    }
+    this.audio.addEventListener("ended", () => {
+      this.isPlaying = false;
+      this.onEnded?.();
+    });
     if (this.onTimeUpdate) {
       this.audio.addEventListener("timeupdate", this.onTimeUpdate);
     }
@@ -156,24 +174,31 @@ class AudioPlayer {
   captureUserGesture() {
     this.#ensureAudioElement();
     this.hasUserGesture = true;
-    if (!this.isIOS) return;
+    if (!this.needsGestureUnlock) return;
 
-    // Prime the element during the gesture. Rejection is fine when src is empty.
+    // Only empty-src primes need cleanup. If media is already loaded, a play()
+    // here would start real audio and must not be paused by a late .then().
+    const isEmptySrcPrime = !this.audio.getAttribute("src");
+    if (!isEmptySrcPrime) return;
+
+    const primeId = ++this.#primeId;
     const playPromise = this.audio.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          if (!this.isPlaying) {
-            this.audio.pause();
-            try {
-              this.audio.currentTime = 0;
-            } catch {
-              // Ignore seek errors while priming.
-            }
-          }
-        })
-        .catch(() => {});
-    }
+    if (playPromise === undefined) return;
+
+    playPromise
+      .then(() => {
+        // Abort if a real src was assigned (or priming was superseded) before
+        // this empty-src promise settled.
+        if (primeId !== this.#primeId) return;
+        if (this.audio.getAttribute("src")) return;
+        this.audio.pause();
+        try {
+          this.audio.currentTime = 0;
+        } catch {
+          // Ignore seek errors while priming.
+        }
+      })
+      .catch(() => {});
   }
 
   async fadeOut() {
@@ -183,6 +208,12 @@ class AudioPlayer {
     if (this.fadeOutInterval) {
       clearInterval(this.fadeOutInterval);
       this.fadeOutInterval = null;
+    }
+
+    // Instant pause on iOS so track changes stay inside the unlocked session.
+    if (this.needsGestureUnlock) {
+      this.audio.pause();
+      return;
     }
 
     const startVolume = this.audio.volume;
@@ -216,6 +247,15 @@ class AudioPlayer {
     }
 
     const targetVolume = this.volume;
+
+    // iOS: play at target volume immediately — fading from 0 is less reliable
+    // and adds async work after the gesture.
+    if (this.needsGestureUnlock) {
+      this.audio.volume = targetVolume;
+      await this.audio.play();
+      return;
+    }
+
     const steps = Math.max(1, Math.floor(this.fadeDuration / 50));
     let step = 0;
     const volumeStep = targetVolume / steps;
@@ -226,9 +266,6 @@ class AudioPlayer {
       await this.audio.play();
     } catch (error) {
       console.warn("Audio play failed during fade in:", error);
-      if (this.isIOS) {
-        this.audio.volume = targetVolume;
-      }
       throw error;
     }
 
@@ -254,7 +291,7 @@ class AudioPlayer {
 
   async play(url = null) {
     // On iOS, ensure we have a user gesture
-    if (this.isIOS && !this.hasUserGesture) {
+    if (this.needsGestureUnlock && !this.hasUserGesture) {
       this.initializeAudio();
     }
 
@@ -272,13 +309,15 @@ class AudioPlayer {
         throw new Error("Invalid audio URL");
       }
 
-      // Load the new URL
+      // Load the new URL. Invalidate any empty-src prime cleanup so it cannot
+      // pause/seek this real playback when its promise settles late.
+      this.#primeId++;
       this.audio.src = url;
-      this.audio.volume = 0;
+      this.audio.volume = this.needsGestureUnlock ? this.volume : 0;
 
       try {
         // Preload on non-iOS devices
-        if (!this.isIOS) {
+        if (!this.needsGestureUnlock) {
           this.audio.load();
         }
         await this.fadeIn();
@@ -287,7 +326,7 @@ class AudioPlayer {
         console.warn("Audio playback failed:", error);
         this.isPlaying = false;
         // Fallback: try direct play for iOS
-        if (this.isIOS) {
+        if (this.needsGestureUnlock) {
           try {
             this.audio.volume = this.volume;
             await this.audio.play();
@@ -310,7 +349,7 @@ class AudioPlayer {
           console.warn("Resume playback failed:", error);
           this.isPlaying = false;
           // Fallback for iOS
-          if (this.isIOS) {
+          if (this.needsGestureUnlock) {
             try {
               this.audio.volume = this.volume;
               await this.audio.play();
@@ -359,4 +398,4 @@ class AudioPlayer {
   }
 }
 
-export { Cache, AudioPlayer };
+export { Cache, AudioPlayer, needsGestureUnlock };
