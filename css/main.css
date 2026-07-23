@@ -372,6 +372,7 @@ h1 {
   letter-spacing: 0.02em;
   text-decoration: none;
   border: 1.5px solid transparent;
+  cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
@@ -938,3 +939,177 @@ peters-music-list:has(peters-music.playing) .turntable-needle {
     width: 42%;
   }
 }
+
+/* Resume PDF modal viewer */
+.pdf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.pdf-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 24, 21, 0.55);
+}
+
+.pdf-modal__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 920px);
+  height: min(92vh, 960px);
+  background: var(--canvas, #fafaf8);
+  border: 1px solid rgba(24, 24, 21, 0.12);
+  box-shadow: 0 24px 64px rgba(24, 24, 21, 0.28);
+  overflow: hidden;
+}
+
+.pdf-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(24, 24, 21, 0.1);
+  background: #f3f3f0;
+}
+
+.pdf-modal__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink, #181815);
+}
+
+.pdf-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pdf-modal__download {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--navy);
+  text-decoration: none;
+}
+
+.pdf-modal__download:hover {
+  text-decoration: underline;
+}
+
+.pdf-modal__close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink, #181815);
+}
+
+.pdf-modal__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #e8e8e4;
+}
+
+.pdf-modal__image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+  object-fit: contain;
+}
+
+.pdf-viewer,
+.pdf-viewer-client {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.pdf-viewer__loading,
+.pdf-viewer-client__status {
+  margin: auto;
+  padding: 2rem;
+  font-family: var(--font-sans);
+  color: var(--muted, #5c5c56);
+  text-align: center;
+}
+
+.pdf-viewer-client__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.pdf-viewer-client__pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pdf-viewer-client__page-wrap {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(24, 24, 21, 0.18);
+}
+
+.pdf-viewer-client__page {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* pdf.js annotation layer sits over the canvas for clickable URI links */
+.pdf-viewer-client__page-wrap .annotationLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pdf-viewer-client__page-wrap .annotationLayer section {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.pdf-viewer-client__page-wrap .annotationLayer a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.pdf-viewer-client__page-wrap .annotationLayer a:hover {
+  background: rgba(27, 61, 110, 0.08);
+  outline: 1px solid rgba(27, 61, 110, 0.28);
+}
+
+@media (max-width: 640px) {
+  .pdf-modal {
+    padding: 0;
+  }
+
+  .pdf-modal__panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+  }
+}
+
