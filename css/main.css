@@ -1064,12 +1064,41 @@ peters-music-list:has(peters-music.playing) .turntable-needle {
   gap: 1rem;
 }
 
+.pdf-viewer-client__page-wrap {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(24, 24, 21, 0.18);
+}
+
 .pdf-viewer-client__page {
   display: block;
   max-width: 100%;
   height: auto;
-  background: #fff;
-  box-shadow: 0 2px 16px rgba(24, 24, 21, 0.18);
+}
+
+/* pdf.js annotation layer sits over the canvas for clickable URI links */
+.pdf-viewer-client__page-wrap .annotationLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pdf-viewer-client__page-wrap .annotationLayer section {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.pdf-viewer-client__page-wrap .annotationLayer a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.pdf-viewer-client__page-wrap .annotationLayer a:hover {
+  background: rgba(27, 61, 110, 0.08);
+  outline: 1px solid rgba(27, 61, 110, 0.28);
 }
 
 @media (max-width: 640px) {
