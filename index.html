@@ -231,9 +231,15 @@
 				<h2 class="resume-cta__title">Want the full picture?</h2>
 			</div>
 			<div class="resume-cta__actions">
-				<a class="resume-btn resume-btn--solid" href="resume_7_17_2026.pdf" download="resume.pdf">
-					Download PDF <span aria-hidden="true"></span>
-				</a>
+				<button
+					type="button"
+					class="resume-btn resume-btn--solid"
+					data-pdf-link
+					data-file="Peter_Johnstone_Resume_7_23_2026.pdf"
+					data-title="Resume"
+				>
+					View Resume
+				</button>
 				<a class="resume-btn resume-btn--outline" href="https://www.linkedin.com/in/pjohnstone19/" target="_blank" rel="noopener">
 					LinkedIn Profile <span aria-hidden="true"></span>
 				</a>
@@ -278,5 +284,6 @@
 		</div>
 	</footer>
 	<script type="module" src="js/web-components.js"></script>
+	<script type="module" src="js/pdf-viewer-link.js"></script>
 </body>
 </html>
