@@ -1,6 +1,8 @@
 /**
  * GuidePdfLink equivalent — "View Resume" trigger + modal portal.
- * If the file is a PDF, mounts PdfViewer; images would use <img> instead.
+ * Progressive enhancement: the CTA is a real <a href="...pdf"> so the resume
+ * remains reachable when JS is disabled or this module fails to init.
+ * With JS, clicks open the modal viewer instead of navigating away.
  */
 import { mountPdfViewer } from "./pdf-viewer.js";
 
@@ -50,7 +52,7 @@ function escapeAttr(value) {
 }
 
 function openPdfLink(trigger) {
-  const file = trigger.getAttribute("data-file") || trigger.getAttribute("href");
+  const file = trigger.getAttribute("href") || trigger.getAttribute("data-file");
   const title = trigger.getAttribute("data-title") || "Resume";
   if (!file) return;
 
