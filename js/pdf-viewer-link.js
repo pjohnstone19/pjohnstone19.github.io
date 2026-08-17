@@ -15,12 +15,23 @@ function isPdf(url) {
   }
 }
 
+function downloadNameFor(file) {
+  try {
+    const path = new URL(file, window.location.href).pathname;
+    const base = path.split("/").pop();
+    return base && base.toLowerCase().endsWith(".pdf") ? base : "resume.pdf";
+  } catch {
+    return "resume.pdf";
+  }
+}
+
 function createModal({ title, file }) {
   const modal = document.createElement("div");
   modal.className = "pdf-modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
   modal.setAttribute("aria-label", title || "Document viewer");
+  const downloadName = downloadNameFor(file);
 
   modal.innerHTML = `
     <div class="pdf-modal__backdrop" data-pdf-close></div>
@@ -28,7 +39,7 @@ function createModal({ title, file }) {
       <header class="pdf-modal__header">
         <h2 class="pdf-modal__title">${escapeHtml(title || "Resume")}</h2>
         <div class="pdf-modal__header-actions">
-          <a class="pdf-modal__download" href="${escapeAttr(file)}" download="Peter_Johnstone_Resume_7_23_2026.pdf">Download PDF</a>
+          <a class="pdf-modal__download" href="${escapeAttr(file)}" download="${escapeAttr(downloadName)}">Download PDF</a>
           <button type="button" class="pdf-modal__close" data-pdf-close aria-label="Close">×</button>
         </div>
       </header>
