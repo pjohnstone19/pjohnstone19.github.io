@@ -8,6 +8,8 @@
   --accent: #c5d4ea;
   --font-sans: Roboto, system-ui, sans-serif;
   --base-radius: 12px;
+  /* Fallback until the nav height is measured. Desktop is one row. */
+  --nav-offset: 4.5rem;
 }
 
 *,
@@ -114,7 +116,6 @@ html {
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid rgba(24, 24, 21, 0.08);
-  scroll-margin-top: 4rem;
   background-color: var(--canvas);
   /* Compressed hero variants (~100–250KB) instead of the 5.5MB source */
   background-image: image-set(
@@ -143,13 +144,14 @@ html {
   background: rgba(250, 250, 248, 0.72);
 }
 
+.header,
 #experience,
 #projects,
 #skills,
 #leadership,
 #resume,
 #contact {
-  scroll-margin-top: 4.5rem;
+  scroll-margin-top: var(--nav-offset);
 }
 
 h1 {
@@ -528,6 +530,11 @@ h1 {
 
 /* Mobile */
 @media (max-width: 768px) {
+  :root {
+    /* Two-row nav: logo, then links + resume. */
+    --nav-offset: 7.5rem;
+  }
+
   .site-nav {
     flex-wrap: wrap;
     padding-top: 0.75rem;

@@ -285,6 +285,27 @@
 			<p class="site-footer__note">Designed &amp; built with care</p>
 		</div>
 	</footer>
+	<script>
+		(function () {
+			var nav = document.querySelector(".site-nav");
+			if (!nav) return;
+
+			function applyOffset() {
+				document.documentElement.style.setProperty(
+					"--nav-offset",
+					Math.ceil(nav.getBoundingClientRect().height) + "px"
+				);
+			}
+
+			applyOffset();
+
+			if ("ResizeObserver" in window) {
+				new ResizeObserver(applyOffset).observe(nav);
+			} else {
+				window.addEventListener("resize", applyOffset);
+			}
+		})();
+	</script>
 	<script type="module" src="js/web-components.js"></script>
 	<script type="module" src="js/pdf-viewer-link.js"></script>
 	<!-- Vercel Web Analytics -->
