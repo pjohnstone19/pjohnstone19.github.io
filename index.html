@@ -42,7 +42,7 @@
 				<li><a href="#skills">Skills</a></li>
 				<li><a href="#contact">Contact</a></li>
 			</ul>
-			<a class="site-nav__resume" href="#resume">Resume</a>
+			<a class="site-nav__resume" href="Peter_Johnstones_Resume_10_9_2026.pdf" data-pdf-link data-title="Resume">My Resumé</a>
 		</div>
 	</nav>
 
@@ -71,23 +71,36 @@
 			<h4><em>Cisco - Secure Network Analytics Detections Team | May 2025 - May 2026</em></h4>
 			<h4><em>Software Engineering Intern</em></h4>
 			<ul>
-				<li>Created an internal Confluence for 100+ core network detections, tracing Python/Django logic and SQL queries across PostgreSQL, Vertica, 15 repositories and 300+ files, reducing detection analysis from hours of code and SQL tracing to 1-2 minutes</li>
-				<li>Reverse-engineered 100+ Python/SQL-based legacy detections into scalable, self-contained JSON NDR rules andidentified 15+ platform gaps, partnering with a principal engineer to prioritize migration to Cisco’s newer SNA engine</li>
-				<li>Automated detection QA with Wireshark, Claude Code, and MCP, cutting full-suite testing from 100–200 hours down to 1-2 hours and catching defects in 15 detections before production</li>
-				<li>Trained 6 of 7 teammates, including 2 QA engineers, 3 software engineers, and the team lead, to use the Claude Code/MCP testing workflow, enabling continued adoption and handoff of the automation after the internship</li>
+				<li>Accelerated engineering productivity by reducing analysis of security rules used to identify malicious network
+					activity from hours to minutes, developing centralized technical documentation for over 100 detections across 16
+					repositories and over 400, 000 lines of Python/Django code</li>
+				<li>Enabled scalable platform modernization by translating all legacy Python/SQL detection rules into self-contained
+					JSON rules, identifying 15+ architectural gaps and collaborating with senior engineering leadership to prioritize
+					migration solutions</li>
+				<li>Improved software quality and release efficiency by automating network detection testing with Wireshark, Claude
+					Code MCP, reducing QA execution time from hundreds of hours to 1 hour while identifying system defects in
+					before deployment to production</li>
+				<li>Drove team-wide adoption of AI-assisted testing by training 8 engineers on automated QA workflows, establishing
+					reusable processes that supported long-term maintainability and continued use</li>
 			</ul>
 			<h4><em>Stonehill College Digital Innovation Lab | Jan 2025 - May 2025</em></h4>
-			<h4><em>Web Developer</em></h4>
+			<h4><em>Full Stack Software Engineer</em></h4>
 			<ul>
-				<li>Re-architected a WordPress literary magazine by migrating 200+ submissions into a structured Posts system and custom PHP theme, cutting homepage average load time from 10+ seconds down to 1-2 seconds</li>
-				<li>Replaced 3 outdated plugins with custom theme functionality, reducing dependencies to 1 free plugin and eliminating $200/year in licensing costs</li>
-				<li>Streamlined content publishing with automated release tagging and ordering, reducing publishing time from around 20 minutes down to 5-10 minutes per submission; trained the site owner on the theme, which remains in production</li>
+				<li>Improved user experience through responsive frontend design and performance optimization, reducing average
+					homepage load times from over 10 seconds to 1 second for a digital literary publication</li>
+				<li>Enhanced backend efficiency and system maintainability by restructuring over 200 content submissions and
+					replacing outdated dependencies with custom PHP functionality, reducing technical debt and eliminating $200 in
+					annual licensing costs</li>
+				<li>Streamlined content management by automating publishing workflows, reducing publication time from 20 minutes
+					to 5 minutes per submission while delivering an intuitive, maintainable system that remains in production</li>
 			</ul>
 			<h4><em>Stonehill College Computer Science Department | Sept - Dec 2024</em></h4>
 			<h4><em>Data Structures Learning Assistant</em></h4>
 			<ul>
-				<li>Served as the sole tutor for a 40-student Java Data Structures course, delivering 42 hours of instruction on trees, graphs, hash tables, recursion, backtracking, Big-O analysis, and other core concepts</li>
-				<li>Developed midterm and final practice exams for all 40 students, drawing 25-30 students per review session; materials were retained by the professor for future semesters</li>
+				<li>Strengthened Java programming and problem-solving skills for 40 students through tutoring data structures and
+					algorithms weekly, covering trees, graphs, hash tables, recursion, backtracking, Big-O analysis, and other core concepts</li>
+				<li>Created and administered practice exams for all 40 students, providing focused review sessions that helped
+					students prepare for exams and improve their understanding of core concepts</li>
 			</ul>
 		</div>
 	</section>
@@ -285,6 +298,27 @@
 			<p class="site-footer__note">Designed &amp; built with care</p>
 		</div>
 	</footer>
+	<script>
+		(function () {
+			var nav = document.querySelector(".site-nav");
+			if (!nav) return;
+
+			function applyOffset() {
+				document.documentElement.style.setProperty(
+					"--nav-offset",
+					Math.ceil(nav.getBoundingClientRect().height) + "px"
+				);
+			}
+
+			applyOffset();
+
+			if ("ResizeObserver" in window) {
+				new ResizeObserver(applyOffset).observe(nav);
+			} else {
+				window.addEventListener("resize", applyOffset);
+			}
+		})();
+	</script>
 	<script type="module" src="js/web-components.js"></script>
 	<script type="module" src="js/pdf-viewer-link.js"></script>
 	<!-- Vercel Web Analytics -->
